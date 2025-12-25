@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>🍺 Bieren Wereld</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+            /* iOS Safari safe area */
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        #map-2d {
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Compacte header voor mobiel */
+        .header {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(212, 160, 23, 0.95);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            font-weight: bold;
+            color: white;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        /* Bottom sheet voor filters */
+        .controls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.98);
+            padding: 16px 12px 20px 12px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .controls-handle {
+            width: 40px;
+            height: 4px;
+            background-color: #ccc;
+            border-radius: 2px;
+            margin: 0 auto 12px auto;
+        }
+
+        .controls select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #d4a017;
+            border-radius: 12px;
+            background-color: white;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23d4a017" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e');
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 40px;
+        }
+
+        .toggle-btn {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            background-color: #d4a017;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 8px rgba(212, 160, 23, 0.3);
+        }
+
+        .toggle-btn:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 4px rgba(212, 160, 23, 0.3);
+        }
+
+        /* Verberg desktop info */
+        .info {
+            display: none;
+        }
+
+        /* Mobiel-geoptimaliseerde popups */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .leaflet-popup-content {
+            margin: 12px 16px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .popup-content h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: #d4a017;
+        }
+
+        .popup-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        /* Edit modal voor mobiel */
+        .edit-modal {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: white;
+            padding: 20px 16px 24px 16px;
+            border-radius: 20px 20px 0 0;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+
+        .edit-modal h3 {
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 18px;
+        }
+
+        .edit-modal label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .edit-modal input, .edit-modal select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 16px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .edit-modal input:focus, .edit-modal select:focus {
+            outline: none;
+            border-color: #d4a017;
+        }
+
+        .edit-modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .edit-modal-buttons button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 16px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .save-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1999;
+        }
+
+        .edit-button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background-color: #d4a017;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Zorg dat zoom controls goed zichtbaar zijn */
+        .leaflet-control-zoom {
+            margin-bottom: 220px !important;
+        }
+
+        /* Responsive voor grotere schermen */
+        @media (min-width: 768px) {
+            .header {
+                font-size: 16px;
+                padding: 10px 20px;
+            }
+
+            .controls {
+                max-width: 400px;
+                left: 50%;
+                transform: translateX(-50%);
+                border-radius: 20px;
+                margin-bottom: 10px;
+            }
+
+            .leaflet-control-zoom {
+                margin-bottom: 10px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map-2d"></div>
+    
+    <div class="header">🍺 Bieren Wereld</div>
+    
+    <div class="controls">
+        <div class="controls-handle"></div>
+        <select id="filterSelect" onchange="applyFilters()">
+            <option value="">Alle personen</option>
+        </select>
+        <select id="yearFilter" onchange="applyFilters()">
+            <option value="">Alle jaren</option>
+        </select>
+        <button class="toggle-btn" onclick="location.reload()">🔄 Vernieuwen</button>
+    </div>
+    
+    <div class="info" id="info">
+        <p><strong>Instructies:</strong></p>
+        <ul>
+            <li>Klik op marker</li>
+            <li>Zoom +/-</li>
+            <li>Sleep</li>
+        </ul>
+        <p style="margin-top: 10px; font-size: 11px; color: #666;"><strong>Gefiltered:</strong> <span id="filterCount">-</span></p>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeEditModal()"></div>
+    <div class="edit-modal" id="editModal">
+        <h3>🍺 Bier bewerken</h3>
+        <label>Naam:</label>
+        <input type="text" id="editName" />
+        
+        <label>Plaats:</label>
+        <input type="text" id="editPlaats" />
+        
+        <label>Land:</label>
+        <input type="text" id="editLand" />
+        
+        <label>Alcohol %:</label>
+        <input type="number" step="0.1" id="editPercentage" />
+        
+        <label>Gepresenteerd door:</label>
+        <input type="text" id="editPresentor" />
+        
+        <label>Gepresenteerd in:</label>
+        <input type="number" id="editYear" />
+        
+        <div class="edit-modal-buttons">
+            <button class="save-btn" onclick="saveBeerEdit()">Opslaan</button>
+            <button class="cancel-btn" onclick="closeEditModal()">Annuleren</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    
+    <script>
+        // ===== GLOBALE VARIABELEN =====
+        let map2D, currentMode = '2d';
+        let beersData = null;
+        let markerClusterGroup, allMarkers = {}, allMarkersArray = [];
+        let markersByYear = {};
+        let clusteringEnabled = true;
+        let currentEditingFeature = null;
+        let currentEditingMarker = null;
+
+        // ===== 2D KAART FUNCTIES =====
+        function init2DMap() {
+            if (!beersData) {
+                console.error('Geen bieren data beschikbaar');
+                return;
+            }
+            if (!map2D) {
+                map2D = L.map('map-2d', {
+                    zoomControl: false,
+                    attributionControl: true,
+                    maxBounds: [[-90, -180], [90, 180]]
+                }).setView([20, 10], 3);
+
+                // Zoom controls linksonder
+                L.control.zoom({
+                    position: 'bottomleft'
+                }).addTo(map2D);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19,
+                    minZoom: 2
+                }).addTo(map2D);
+
+                markerClusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 50,
+                    disableClusteringAtZoom: 10,
+                    chunkedLoading: true
+                });
+
+                function getPopupContent(feature) {
+                    const props = feature.properties;
+                    const percentageText = props.percentage ? `<p><span class="popup-label">Alcohol:</span> ${props.percentage}%</p>` : '';
+                    const doorText = props.gepresenteerd_door ? `<p><span class="popup-label">Door:</span> ${props.gepresenteerd_door}</p>` : '';
+                    const jaarText = props.gepresenteerd_in ? `<p><span class="popup-label">Jaar:</span> ${props.gepresenteerd_in}</p>` : '';
+                    return `
+                        <div class="popup-content">
+                            <h3>🍺 ${props.name}</h3>
+                            <p><span class="popup-label">Plaats:</span> ${props.plaats}</p>
+                            <p><span class="popup-label">Land:</span> ${props.land}</p>
+                            ${percentageText}
+                            ${doorText}
+                            ${jaarText}
+                            <button class="edit-button" onclick="openEditModal(${beersData.features.indexOf(feature)})">Bewerken</button>
+                        </div>
+                    `;
+                }
+
+                // Makers en filter opties verzamelen
+                const presenters = new Set();
+                const years = new Set();
+                beersData.features.forEach(feature => {
+                    const coords = feature.geometry.coordinates;
+                    const lat = coords[1];
+                    const lon = coords[0];
+
+                    // Skip invalid coordinates
+                    if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+                        console.warn('Ongeldige coördinaten voor:', feature.properties.name);
+                        return;
+                    }
+
+                    const props = feature.properties;
+                    const presenterId = props.gepresenteerd_door;
+                    const year = props.gepresenteerd_in;
+
+                    presenters.add(presenterId);
+                    if (year) years.add(year);
+                    
+                    const marker = L.marker([lat, lon], {
+                        icon: L.icon({
+                            iconUrl: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiNkNGEwMTciIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTIiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj7wn46rPC90ZXh0Pjwvc3ZnPg==',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32],
+                            popupAnchor: [0, -32]
+                        }),
+                        presenterId: presenterId,
+                        year: year
+                    });
+                    
+                    marker.bindPopup(getPopupContent(feature));
+                    markerClusterGroup.addLayer(marker);
+
+                    // Marker in globale object opslaan per presentator
+                    if (!allMarkers[presenterId]) {
+                        allMarkers[presenterId] = [];
+                    }
+                    allMarkers[presenterId].push(marker);
+                    
+                    // Marker in globale object opslaan per jaar
+                    if (year) {
+                        if (!markersByYear[year]) {
+                            markersByYear[year] = [];
+                        }
+                        markersByYear[year].push(marker);
+                    }
+                    
+                    allMarkersArray.push(marker);
+                });
+
+                map2D.addLayer(markerClusterGroup);
+
+                // Filter dropdown vullen - presentatoren
+                const filterSelect = document.getElementById('filterSelect');
+                Array.from(presenters).sort().forEach(presenter => {
+                    const option = document.createElement('option');
+                    option.value = presenter;
+                    option.textContent = presenter;
+                    filterSelect.appendChild(option);
+                });
+
+                // Filter dropdown vullen - jaren
+                const yearFilter = document.getElementById('yearFilter');
+                Array.from(years).sort((a, b) => a - b).forEach(year => {
+                    const option = document.createElement('option');
+                    option.value = year;
+                    option.textContent = year;
+                    yearFilter.appendChild(option);
+                });
+
+                // Update filter count
+                document.getElementById('filterCount').textContent = beersData.features.length;
+
+                if (beersData.features.length > 0) {
+                    const group = new L.featureGroup(markerClusterGroup.getLayers());
+                    map2D.fitBounds(group.getBounds().pad(0.1));
+                }
+            }
+        }
+
+        // ===== CLUSTERING TOGGLE =====
+        function toggleClustering() {
+            const btn = document.getElementById('clusterBtn');
+
+            if (clusteringEnabled) {
+                // Zet clustering UIT - toon alle markers individueel
+                map2D.removeLayer(markerClusterGroup);
+                allMarkersArray.forEach(marker => {
+                    marker.addTo(map2D);
+                });
+                clusteringEnabled = false;
+                btn.textContent = 'Groeperen AAN';
+                btn.style.backgroundColor = '#28a745';
+            } else {
+                // Zet clustering AAN - gebruik cluster groep
+                allMarkersArray.forEach(marker => {
+                    map2D.removeLayer(marker);
+                });
+                map2D.addLayer(markerClusterGroup);
+                clusteringEnabled = true;
+                btn.textContent = 'Groeperen UIT';
+                btn.style.backgroundColor = '#d4a017';
+            }
+        }
+
+        // ===== FILTER FUNCTIE =====
+        function applyFilters() {
+            const filterSelect = document.getElementById('filterSelect');
+            const yearFilter = document.getElementById('yearFilter');
+            const selectedPresenter = filterSelect.value;
+            const selectedYear = yearFilter.value;
+
+            // Bepaal welke markers getoond moeten worden
+            let markersToShow = allMarkersArray;
+
+            if (selectedPresenter !== '' || selectedYear !== '') {
+                markersToShow = allMarkersArray.filter(marker => {
+                    const matchesPresenter = selectedPresenter === '' || marker.options.presenterId === selectedPresenter;
+                    const matchesYear = selectedYear === '' || marker.options.year == selectedYear;
+                    return matchesPresenter && matchesYear;
+                });
+            }
+
+            if (clusteringEnabled) {
+                // Filter met clustering
+                // Alle markers verwijderen
+                allMarkersArray.forEach(marker => {
+                    markerClusterGroup.removeLayer(marker);
+                });
+
+                // Alleen gefilterde markers toevoegen
+                markersToShow.forEach(marker => {
+                    markerClusterGroup.addLayer(marker);
+                });
+            } else {
+                // Filter zonder clustering
+                // Alle markers verwijderen
+                allMarkersArray.forEach(marker => {
+                    map2D.removeLayer(marker);
+                });
+
+                // Alleen gefilterde markers toevoegen
+                markersToShow.forEach(marker => {
+                    marker.addTo(map2D);
+                });
+            }
+
+            // Update counter
+            document.getElementById('filterCount').textContent = markersToShow.length;
+
+            // Zoom naar gefilterde markers als er een filter actief is
+            if (markersToShow.length > 0 && (selectedPresenter !== '' || selectedYear !== '')) {
+                const group = new L.featureGroup(markersToShow);
+                map2D.fitBounds(group.getBounds().pad(0.2));
+            }
+        }
+
+        // Embedded GeoJSON data
+        beersData = {
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -6.2605593,
+          53.3493795
+        ]
+      },
+      "properties": {
+        "name": "Kilkenny",
+        "plaats": "Dublin",
+        "land": "Ierland",
+        "percentage": 4.3,
+        "gepresenteerd_door": "Syl",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2501187,
+          50.8395994
+        ]
+      },
+      "properties": {
+        "name": "Bourgognes Flandres",
+        "plaats": "Itterbeek",
+        "land": "België",
+        "percentage": 5.0,
+        "gepresenteerd_door": "Jean",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1215634,
+          52.0907006
+        ]
+      },
+      "properties": {
+        "name": "Paulus Bier",
+        "plaats": "Utrecht",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": "Wiel",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.8597813,
+          51.1366583
+        ]
+      },
+      "properties": {
+        "name": "Ricks Bier",
+        "plaats": "Lochristi",
+        "land": "België",
+        "percentage": 6.0,
+        "gepresenteerd_door": "Rick J",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8585553,
+          50.7041498
+        ]
+      },
+      "properties": {
+        "name": "Valdieux",
+        "plaats": "Aubel",
+        "land": "België",
+        "percentage": 6.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.745452,
+          50.1501741
+        ]
+      },
+      "properties": {
+        "name": "Mc Chouffe",
+        "plaats": "Achouffe",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": "Leo Rothkrans",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.7289867,
+          50.930143
+        ]
+      },
+      "properties": {
+        "name": "Trappist Westvleteren",
+        "plaats": "Vleteren",
+        "land": "België",
+        "percentage": 10.2,
+        "gepresenteerd_door": "Wim Haan",
+        "gepresenteerd_in": 2009
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1422542,
+          51.5854521
+        ]
+      },
+      "properties": {
+        "name": "La trappe",
+        "plaats": "Berkel-Enschot",
+        "land": "Nederland",
+        "percentage": 7.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.7439565,
+          48.4008273
+        ]
+      },
+      "properties": {
+        "name": "Weihenstephaner",
+        "plaats": "Freising",
+        "land": "Duitsland",
+        "percentage": 5.4,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Ijsbok",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 6.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Toebak",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.3617847,
+          51.1794946
+        ]
+      },
+      "properties": {
+        "name": "Hob Gobin",
+        "plaats": "Hoboken",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.007632,
+          50.930718
+        ]
+      },
+      "properties": {
+        "name": "Kostrisser",
+        "plaats": "Bad Köstritz",
+        "land": "Duitsland",
+        "percentage": 4.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.6202796,
+          50.8585545
+        ]
+      },
+      "properties": {
+        "name": "Bernardus Pater 6",
+        "plaats": "Watou",
+        "land": "België",
+        "percentage": 6.7,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2011
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8170994,
+          52.6008538
+        ]
+      },
+      "properties": {
+        "name": "Omen",
+        "plaats": "Alkmaar",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2012
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8947023,
+          50.8319039
+        ]
+      },
+      "properties": {
+        "name": "Brand Zwaar Blond",
+        "plaats": "Wijlre",
+        "land": "Nederland",
+        "percentage": 7.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2012
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.7763137,
+          51.2254018
+        ]
+      },
+      "properties": {
+        "name": "Bolton ur Alt",
+        "plaats": "Düsseldorf",
+        "land": "Duitsland",
+        "percentage": 4.9,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2012
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7510872,
+          52.0834347
+        ]
+      },
+      "properties": {
+        "name": "Bloed Zweet en Tranen",
+        "plaats": "Bodegraven",
+        "land": "Nederland",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2012
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.6202796,
+          50.8585545
+        ]
+      },
+      "properties": {
+        "name": "Kapittel",
+        "plaats": "Watou",
+        "land": "België",
+        "percentage": 6.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2012
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.4546268,
+          51.1319137
+        ]
+      },
+      "properties": {
+        "name": "Gerardus bier",
+        "plaats": "Peer",
+        "land": "België",
+        "percentage": 6.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.8041149,
+          51.1980327
+        ]
+      },
+      "properties": {
+        "name": "Wit Goud",
+        "plaats": "Zelzate",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.1007692,
+          51.1912194
+        ]
+      },
+      "properties": {
+        "name": "Moeder Overste",
+        "plaats": "Jabbeke",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.769483,
+          50.304636
+        ]
+      },
+      "properties": {
+        "name": "Mared Sous",
+        "plaats": "Maredsous",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2022689,
+          51.0152271
+        ]
+      },
+      "properties": {
+        "name": "Deus",
+        "plaats": "Buggenhout",
+        "land": "België",
+        "percentage": 11.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2496669,
+          50.9091629
+        ]
+      },
+      "properties": {
+        "name": "Urthel",
+        "plaats": "Kobbegem",
+        "land": "België",
+        "percentage": 9.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2013
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.366595,
+          49.6397248
+        ]
+      },
+      "properties": {
+        "name": "Orval",
+        "plaats": "Villers-devant-Orval",
+        "land": "België",
+        "percentage": 6.2,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.575887,
+          50.582865
+        ]
+      },
+      "properties": {
+        "name": "Bush Noël",
+        "plaats": "Pipaix",
+        "land": "België",
+        "percentage": 12.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.9883704,
+          51.2620493
+        ]
+      },
+      "properties": {
+        "name": "Stoute Limburger",
+        "plaats": "Neer",
+        "land": "Nederland",
+        "percentage": 5.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.7924049,
+          52.2658726
+        ]
+      },
+      "properties": {
+        "name": "De Fluitter",
+        "plaats": "Hengelo",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8298607,
+          52.4424926
+        ]
+      },
+      "properties": {
+        "name": "Drie",
+        "plaats": "Zaandam",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.9882649,
+          51.1933903
+        ]
+      },
+      "properties": {
+        "name": "Christoffel",
+        "plaats": "Roermond",
+        "land": "Nederland",
+        "percentage": 6.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.3777659,
+          36.0663249
+        ]
+      },
+      "properties": {
+        "name": "Tsing Tao",
+        "plaats": "Qingdao",
+        "land": "China",
+        "percentage": 4.7,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4803453,
+          51.0281381
+        ]
+      },
+      "properties": {
+        "name": "Gouden Carolus",
+        "plaats": "Mechelen",
+        "land": "België",
+        "percentage": 8.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2014
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.1453352,
+          51.8260823
+        ]
+      },
+      "properties": {
+        "name": "Pötje",
+        "plaats": "Oelde",
+        "land": "Duitsland",
+        "percentage": 4.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.9883704,
+          51.2620493
+        ]
+      },
+      "properties": {
+        "name": "Lindeboom Herfstbok",
+        "plaats": "Neer",
+        "land": "Nederland",
+        "percentage": 6.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.8041149,
+          51.1980327
+        ]
+      },
+      "properties": {
+        "name": "Zwart Goud",
+        "plaats": "Zelzate",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.4652789,
+          51.5142273
+        ]
+      },
+      "properties": {
+        "name": "Hövels",
+        "plaats": "Dortmund",
+        "land": "Duitsland",
+        "percentage": 5.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.1896665,
+          50.9690529
+        ]
+      },
+      "properties": {
+        "name": "Tricky Tripel",
+        "plaats": "Opwijk",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7011675,
+          50.879202
+        ]
+      },
+      "properties": {
+        "name": "Leffe Royal",
+        "plaats": "Leuven",
+        "land": "België",
+        "percentage": 7.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8870343,
+          50.7741896
+        ]
+      },
+      "properties": {
+        "name": "Hopus",
+        "plaats": "Hoegaarden",
+        "land": "België",
+        "percentage": 8.3,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.7471789,
+          51.1793505
+        ]
+      },
+      "properties": {
+        "name": "Gulden Draak",
+        "plaats": "Ertvelde",
+        "land": "België",
+        "percentage": 10.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2015
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7760237,
+          51.5887845
+        ]
+      },
+      "properties": {
+        "name": "Mooie Nel IPA",
+        "plaats": "Breda",
+        "land": "Nederland",
+        "percentage": 6.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.2631367,
+          50.9216909
+        ]
+      },
+      "properties": {
+        "name": "Kasteelbier Rouge",
+        "plaats": "Ingelmunster",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Zatte, Brouwerij 't Ij",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -122.4193286,
+          37.7792588
+        ]
+      },
+      "properties": {
+        "name": "Old Foghorn",
+        "plaats": "San Francisco",
+        "land": "Verenigde Staten",
+        "percentage": 9.2,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.6041443,
+          50.8433705
+        ]
+      },
+      "properties": {
+        "name": "Broeder Jacob",
+        "plaats": "Oudenaarde",
+        "land": "België",
+        "percentage": 5.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.6383121,
+          50.9769474
+        ]
+      },
+      "properties": {
+        "name": "Tongerlo Prior",
+        "plaats": "Haacht",
+        "land": "België",
+        "percentage": 9.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.1785077,
+          51.476261
+        ]
+      },
+      "properties": {
+        "name": "Hertog Jan Grand Prestige",
+        "plaats": "Arcen",
+        "land": "Nederland",
+        "percentage": 10.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2016
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          10.2826,
+          47.5182
+        ]
+      },
+      "properties": {
+        "name": "Holzar Bier",
+        "plaats": "Sonthofen",
+        "land": "Duitsland",
+        "percentage": 5.2,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Kut Bier",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 6.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9423486,
+          50.642839
+        ]
+      },
+      "properties": {
+        "name": "BarBar",
+        "plaats": "Silly",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.3244863,
+          51.0424768
+        ]
+      },
+      "properties": {
+        "name": "Cornet",
+        "plaats": "Breendonk",
+        "land": "België",
+        "percentage": 8.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.383165,
+          50.729969
+        ]
+      },
+      "properties": {
+        "name": "Reuz",
+        "plaats": "Helkijn",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.1919739,
+          50.8348548
+        ]
+      },
+      "properties": {
+        "name": "Hop met de Gijt",
+        "plaats": "Schepdaal",
+        "land": "België",
+        "percentage": 6.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.2631367,
+          50.9216909
+        ]
+      },
+      "properties": {
+        "name": "Cuvée Chateau",
+        "plaats": "Ingelmunster",
+        "land": "België",
+        "percentage": 11.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2496669,
+          50.9091629
+        ]
+      },
+      "properties": {
+        "name": "Meesterstuk 2018",
+        "plaats": "Kobbegem",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2017
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.1683085,
+          53.0956508
+        ]
+      },
+      "properties": {
+        "name": "28 Imperial Stout",
+        "plaats": "Ureterp",
+        "land": "Nederland",
+        "percentage": 12.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Thee Idiots Tripel Spiced",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4803453,
+          51.0281381
+        ]
+      },
+      "properties": {
+        "name": "Cuvee van de Keizer Gouden Carolus",
+        "plaats": "Mechelen",
+        "land": "België",
+        "percentage": 11.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4955009,
+          50.0524906
+        ]
+      },
+      "properties": {
+        "name": "Paix Dieu Triple-Framboos",
+        "plaats": "Couvin",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.5607522,
+          50.8354014
+        ]
+      },
+      "properties": {
+        "name": "Triple Le Fort",
+        "plaats": "Vossem",
+        "land": "België",
+        "percentage": 8.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.3181187,
+          50.811795
+        ]
+      },
+      "properties": {
+        "name": "Belgium Teak Beer Dubbel",
+        "plaats": "Vorst",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7510872,
+          52.0834347
+        ]
+      },
+      "properties": {
+        "name": "Iron door Diablo Dropp-off",
+        "plaats": "Bodegraven",
+        "land": "Nederland",
+        "percentage": 8.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2022689,
+          51.0152271
+        ]
+      },
+      "properties": {
+        "name": "Karmeliet",
+        "plaats": "Buggenhout",
+        "land": "België",
+        "percentage": 8.4,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2018
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7011675,
+          50.879202
+        ]
+      },
+      "properties": {
+        "name": "Leffe Blond 0,0",
+        "plaats": "Leuven",
+        "land": "België",
+        "percentage": 0.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.2341308,
+          51.0953014
+        ]
+      },
+      "properties": {
+        "name": "Brice Et Joup",
+        "plaats": "Bornem",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.7250121,
+          51.0538286
+        ]
+      },
+      "properties": {
+        "name": "GhimayWit",
+        "plaats": "Gent",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9395292,
+          50.9151431
+        ]
+      },
+      "properties": {
+        "name": "Lurrie Tripel",
+        "plaats": "Erpe-Mere",
+        "land": "België",
+        "percentage": 8.1,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.0441144,
+          51.028529
+        ]
+      },
+      "properties": {
+        "name": "Hapkin",
+        "plaats": "Kortemark",
+        "land": "België",
+        "percentage": 8.4,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Ijndejaars",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 9.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Fuck the Christmas tree is on fire",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 10.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.7471789,
+          51.1793505
+        ]
+      },
+      "properties": {
+        "name": "Balista",
+        "plaats": "Ertvelde",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1752822,
+          50.15542
+        ]
+      },
+      "properties": {
+        "name": "Rochefort",
+        "plaats": "Rochefort",
+        "land": "België",
+        "percentage": 9.2,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2019
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.4491006,
+          50.829324
+        ]
+      },
+      "properties": {
+        "name": "Verzet",
+        "plaats": "Anzegem",
+        "land": "België",
+        "percentage": 5.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.9415304,
+          50.3234078
+        ]
+      },
+      "properties": {
+        "name": "Blonde non",
+        "plaats": "Purnode",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1215634,
+          52.0907006
+        ]
+      },
+      "properties": {
+        "name": "100 Watt Non de Ju",
+        "plaats": "Utrecht",
+        "land": "Nederland",
+        "percentage": 8.8,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.0914883,
+          50.5047946
+        ]
+      },
+      "properties": {
+        "name": "St.Feuillien Brewery Nine",
+        "plaats": "Le Roeulx",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.018526,
+          52.1174796
+        ]
+      },
+      "properties": {
+        "name": "Bloedbroeder Imperial stout",
+        "plaats": "Loenen",
+        "land": "Nederland",
+        "percentage": 9.1,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.5744905,
+          51.2744706
+        ]
+      },
+      "properties": {
+        "name": "Gegorius",
+        "plaats": "Budel",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.5834571,
+          52.2922753
+        ]
+      },
+      "properties": {
+        "name": "Imperial Barley Wine Klein Duimpje",
+        "plaats": "Hillegom",
+        "land": "Nederland",
+        "percentage": 14.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2022
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4803453,
+          51.0281381
+        ]
+      },
+      "properties": {
+        "name": "Complot IPA",
+        "plaats": "Mechelen",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8585553,
+          50.7041498
+        ]
+      },
+      "properties": {
+        "name": "Valdieu-Noëll kerstbier",
+        "plaats": "Aubel",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.9209671,
+          51.0031021
+        ]
+      },
+      "properties": {
+        "name": "Vreug Duuster",
+        "plaats": "Schellebelle",
+        "land": "België",
+        "percentage": 7.9,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.4546268,
+          51.1319137
+        ]
+      },
+      "properties": {
+        "name": "Gerardus Mercator Tripel",
+        "plaats": "Peer",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.444528,
+          50.4116233
+        ]
+      },
+      "properties": {
+        "name": "Charles Quint",
+        "plaats": "Charleroi",
+        "land": "België",
+        "percentage": 8.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Double IPA Mother IPA",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4803453,
+          51.0281381
+        ]
+      },
+      "properties": {
+        "name": "Gouden Carolus Christmas",
+        "plaats": "Mechelen",
+        "land": "België",
+        "percentage": 10.5,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          2.7289867,
+          50.930143
+        ]
+      },
+      "properties": {
+        "name": "Vleteren 12",
+        "plaats": "Vleteren",
+        "land": "België",
+        "percentage": 10.2,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2023
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7510872,
+          52.0834347
+        ]
+      },
+      "properties": {
+        "name": "Nutty Nephew",
+        "plaats": "Bodegraven",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.8947023,
+          50.8319039
+        ]
+      },
+      "properties": {
+        "name": "Geul Dalsch",
+        "plaats": "Wijlre",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.1511724,
+          51.3924489
+        ]
+      },
+      "properties": {
+        "name": "Bier zonder naam",
+        "plaats": "Venlo",
+        "land": "Nederland",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          5.1215634,
+          52.0907006
+        ]
+      },
+      "properties": {
+        "name": "Three Rules",
+        "plaats": "Utrecht",
+        "land": "Nederland",
+        "percentage": 7.4,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.4698256,
+          51.4679229
+        ]
+      },
+      "properties": {
+        "name": "St. Barbara",
+        "plaats": "Essen",
+        "land": "België",
+        "percentage": null,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.7385027,
+          51.1919904
+        ]
+      },
+      "properties": {
+        "name": "Papegaai",
+        "plaats": "Grobbendonk",
+        "land": "België",
+        "percentage": 8.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.8924534,
+          52.3730796
+        ]
+      },
+      "properties": {
+        "name": "Black Pudding",
+        "plaats": "Amsterdam",
+        "land": "Nederland",
+        "percentage": 11.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          4.5834571,
+          52.2922753
+        ]
+      },
+      "properties": {
+        "name": "Ice Ice Baby",
+        "plaats": "Hillegom",
+        "land": "Nederland",
+        "percentage": 22.0,
+        "gepresenteerd_door": null,
+        "gepresenteerd_in": 2024
+      }
+    }
+  ]
+};
+
+        // Laad JSON data en initialiseer kaart
+        async function loadDataAndInit() {
+            try {
+                console.log('GeoJSON data geladen:', beersData.features.length, 'bieren');
+                init2DMap();
+            } catch (error) {
+                console.error('Fout bij laden van GeoJSON:', error);
+                document.getElementById('info').innerHTML = '<p style="color: red;"><strong>Fout:</strong> Kan bieren data niet laden!</p>';
+            }
+        }
+
+        // ===== BEWERKFUNCTIES =====
+        function openEditModal(featureIndex) {
+            const feature = beersData.features[featureIndex];
+            const props = feature.properties;
+            
+            currentEditingFeature = feature;
+            
+            // Vul formulier met huidige waarden
+            document.getElementById('editName').value = props.name || '';
+            document.getElementById('editPlaats').value = props.plaats || '';
+            document.getElementById('editLand').value = props.land || '';
+            document.getElementById('editPercentage').value = props.percentage || '';
+            document.getElementById('editPresentor').value = props.gepresenteerd_door || '';
+            document.getElementById('editYear').value = props.gepresenteerd_in || '';
+            
+            // Toon modal
+            document.getElementById('modalOverlay').style.display = 'block';
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function closeEditModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('editModal').style.display = 'none';
+            currentEditingFeature = null;
+        }
+
+        async function saveBeerEdit() {
+            if (!currentEditingFeature) return;
+            
+            const props = currentEditingFeature.properties;
+            
+            // Update properties
+            props.name = document.getElementById('editName').value;
+            props.plaats = document.getElementById('editPlaats').value;
+            props.land = document.getElementById('editLand').value;
+            const percentageValue = document.getElementById('editPercentage').value;
+            props.percentage = percentageValue ? parseFloat(percentageValue) : null;
+            props.gepresenteerd_door = document.getElementById('editPresentor').value;
+            const yearValue = document.getElementById('editYear').value;
+            props.gepresenteerd_in = yearValue ? parseInt(yearValue) : null;
+            
+            // Sla op naar bestand
+            try {
+                const response = await fetch('save_geojson.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(beersData)
+                });
+                
+                if (response.ok) {
+                    alert('Bier succesvol bijgewerkt! Vernieuw de pagina om de wijzigingen te zien.');
+                    closeEditModal();
+                } else {
+                    // Als PHP niet beschikbaar is, download het als bestand
+                    downloadGeoJSON();
+                }
+            } catch (error) {
+                console.error('Kan niet opslaan via server, download in plaats daarvan:', error);
+                downloadGeoJSON();
+            }
+        }
+
+        function downloadGeoJSON() {
+            const dataStr = JSON.stringify(beersData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'bieren_geojson.json';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            alert('Wijzigingen opgeslagen! Download het bestand en vervang het originele bieren_geojson.json bestand.');
+            closeEditModal();
+        }
+
+        // Initialiseer 2D map bij laden
+        window.addEventListener('load', function() {
+            loadDataAndInit();
+        });
+
+        // Handle visibility change
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && map2D) {
+                map2D.invalidateSize();
+            }
+        });
+    </script>
+</body>
+</html>
